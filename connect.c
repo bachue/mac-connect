@@ -17,7 +17,7 @@
 #define SCRIPT_LENGTH 2048
 #define URL_LENGTH (SCRIPT_LENGTH - sizeof(SCRIPT_PREFIX) - sizeof(SCRIPT_SUFFIX) + 1)
 
-static int show_usage = 0, show_version = 0;
+static int show_usage = 0, show_version = 0, show_command = 0;
 
 static char osascript[SCRIPT_LENGTH] = SCRIPT_PREFIX;
 static char *url = osascript + sizeof(SCRIPT_PREFIX) - 1;
@@ -30,6 +30,7 @@ static struct option options[] = {
     {"volumn", optional_argument, NULL, 'v'},
     {"help", no_argument, &show_usage, 1},
     {"version", no_argument, &show_version, 1},
+    {"dry-run", no_argument, &show_command, 1},
     {NULL, 0, NULL, 0},
 };
 
@@ -43,7 +44,10 @@ static void print_version();
 int main(int argc, char *argv[]) {
     handle_opts(argc, argv);
     strncat(osascript, SCRIPT_SUFFIX, sizeof(SCRIPT_SUFFIX));
-    exec_script();
+    if (show_command)
+        printf("%s\n", osascript);
+    else
+        exec_script();
     return 0;
 }
 
