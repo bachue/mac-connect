@@ -1,0 +1,18 @@
+Server local #server name
+    Protocol smb # smb, ftp, ...
+    Host localhost
+    Port 1234
+    Volumn public
+    User guest
+    # no password
+
+Server remote
+    Protocol smb
+    Host remote.server
+    Port 5678
+    Volumn share
+    User bachue
+    Pass password
+
+Server remote2
+    Url smb://user:pass@remote2/home

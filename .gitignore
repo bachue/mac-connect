@@ -29,3 +29,4 @@
 *.hex
 
 connect
+test_config.*/*

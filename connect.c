@@ -1,26 +1,22 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <string.h>
 #include <getopt.h>
+#include "common.h"
 
 #define VERSION "0.0.1"
 
 // connect -t protocol [-u user] [-p pass] [-h host] [-P port] [-v volumn]
 // connect protocol://[use:[pass]@]host[:port]/[:volumn]
 
-#define DEFAULT_HOST "localhost"
 #define USAGE "Usage:\n  %s -t protocol [-u user] [-p pass] [-h host] [-P port] [-v volumn]\n  %s protocol://[user:[pass]@]host[:port]/[:volumn]\n"
 
 #define SCRIPT_PREFIX "tell app \"Finder\" to open location \""
 #define SCRIPT_SUFFIX "\""
-#define SCRIPT_LENGTH 2048
-#define URL_LENGTH (SCRIPT_LENGTH - sizeof(SCRIPT_PREFIX) - sizeof(SCRIPT_SUFFIX) + 1)
+#define SCRIPT_LENGTH 2047
+#define BUFLEN 255
 
 static int show_usage = 0, show_version = 0, show_command = 0;
 
-static char osascript[SCRIPT_LENGTH] = SCRIPT_PREFIX;
-static char *url = osascript + sizeof(SCRIPT_PREFIX) - 1;
+static char osascript[SCRIPT_LENGTH + 1] = SCRIPT_PREFIX;
+static char *location = osascript + strlen(SCRIPT_PREFIX);
 static struct option options[] = {
     {"protocol", required_argument, NULL, 't'},
     {"user", optional_argument, NULL, 'u'},
@@ -35,16 +31,16 @@ static struct option options[] = {
 };
 
 static void handle_opts(int argc, char *argv[]);
+static int validate(struct config_entry *entry);
 static void exec_script();
 static void opts_err(char *arg);
 static void unknown_err();
 static void print_usage(char *arg);
 static void print_version();
-void set_url(char *protocol, char *user, char *pass, char *host, char *port, char *volumn);
 
 int main(int argc, char *argv[]) {
     handle_opts(argc, argv);
-    strncat(osascript, SCRIPT_SUFFIX, sizeof(SCRIPT_SUFFIX));
+    strncat(osascript, SCRIPT_SUFFIX, strlen(SCRIPT_SUFFIX));
     if (show_command)
         printf("%s\n", osascript);
     else
@@ -52,61 +48,18 @@ int main(int argc, char *argv[]) {
     return 0;
 }
 
-void set_url(char *protocol, char *user, char *pass,
-                  char *host, char *port, char *volumn) {
-    int protocol_len, user_len, pass_len, host_len, port_len, volumn_len, url_len;
-
-    if (host == NULL) host = DEFAULT_HOST;
-
-    protocol_len = strlen(protocol);
-    if (user != NULL) user_len = strlen(user);
-    if (pass != NULL) pass_len = strlen(pass);
-    host_len = strlen(host);
-    if (port != NULL) port_len = strlen(port);
-    if (volumn != NULL) volumn_len = strlen(volumn);
-
-    url_len = protocol_len + sizeof("://");
-    if (user != NULL) {
-        url_len += user_len + sizeof(":");
-        if (pass != NULL) url_len += pass_len;
-        url_len += sizeof("@");
-    }
-    url_len += host_len;
-    if (port != NULL) url_len += sizeof(":") + port_len;
-    if (volumn != NULL) url_len += sizeof("/") + volumn_len;
-
-    if (url_len > URL_LENGTH) unknown_err();
-
-    strncat(url, protocol, protocol_len);
-    strncat(url, "://", sizeof("://"));
-    if (user != NULL) {
-        strncat(url, user, user_len);
-        strncat(url, ":", sizeof(":"));
-        if (pass != NULL) strncat(url, pass, pass_len);
-        strncat(url, "@", sizeof("@"));
-    }
-    strncat(url, host, host_len);
-    if (port != NULL) {
-        strncat(url, ":", sizeof(":"));
-        strncat(url, port, port_len);
-    }
-    if (volumn != NULL) {
-        strncat(url, "/", sizeof("/"));
-        strncat(url, volumn, volumn_len);
-    }
-}
-
 static void handle_opts(int argc, char *argv[]) {
-    char c, *protocol = NULL, *user = NULL, *pass = NULL, *host = NULL, *port = NULL, *volumn = NULL;
+    char c;
     int err = 0, index = 0;
+    struct config_entry entry = {0}, null = {0};
     while((c = getopt_long(argc, argv, "t:u:p:h:P:v:", options, &index)) != -1) {
         switch (c) {
-            case 't': protocol = optarg; break;
-            case 'u': user = optarg; break;
-            case 'p': pass = optarg; break;
-            case 'h': host = optarg; break;
-            case 'P': port = optarg; break;
-            case 'v': volumn = optarg; break;
+            case 't': entry.protocol = optarg; break;
+            case 'u': entry.user = optarg; break;
+            case 'p': entry.pass = optarg; break;
+            case 'h': entry.host = optarg; break;
+            case 'P': entry.port = optarg; break;
+            case 'v': entry.volumn = optarg; break;
             case '?': err = 1; break;
         }
     }
@@ -116,17 +69,21 @@ static void handle_opts(int argc, char *argv[]) {
 
     if (err > 0 || optind < argc || argc == 1) opts_err(argv[0]);
     else if (optind == 1) {
-        if (protocol == NULL && user == NULL && pass == NULL && host == NULL && port == NULL && volumn == NULL)
-            // set url directly
-            strncpy(url, (const char *)argv[optind], strlen(argv[optind]));
+        if (memcmp(&entry, &null, sizeof(struct config_entry)) == 0)
+            // set location directly
+            strncpy(location, (const char *)argv[optind], strlen(argv[optind]));
         else
             opts_err(argv[0]);
     } else {
-        if (protocol == NULL || (user == NULL && pass != NULL))
+        if (validate(&entry) == 0)
             opts_err(argv[0]);
         else
-            set_url(protocol, user, pass, host, port, volumn);
+            to_url(location, &entry);
     }
+}
+
+static int validate(struct config_entry *entry) {
+    return !(entry->protocol == NULL || (entry->user == NULL && entry->pass != NULL));
 }
 
 static void opts_err(char *arg) {
@@ -146,7 +103,7 @@ static void print_version() {
 
 static void exec_script() {
     int status, fds[2];
-    char message[256];
+    char message[BUFLEN];
     pid_t pid;
 
     if (pipe(fds) == -1) unknown_err();
@@ -163,7 +120,7 @@ static void exec_script() {
             if (close(fds[1]) == -1) unknown_err();
             waitpid(pid, &status, 0);
             if (WEXITSTATUS(status) != 0) {
-                if (read(fds[0], message, sizeof(message)) == -1) unknown_err();
+                if (read(fds[0], message, BUFLEN) == -1) unknown_err();
                 fprintf(stderr, "Error in apple script: %s\nMessage: %s", osascript, message);
                 exit(EXIT_FAILURE);
             } else
