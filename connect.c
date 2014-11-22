@@ -36,6 +36,7 @@ static struct option options[] = {
 static void handle_opts(int argc, char *argv[]);
 static void exec_script();
 static void opts_err(char *arg);
+static void unknown_err();
 static void print_usage(char *arg);
 static void print_version();
 
@@ -133,7 +134,33 @@ static void print_version() {
 }
 
 static void exec_script() {
-    execlp("osascript", "osascript", "-e", osascript, NULL);
-    fprintf(stderr, "osascript error\n");
+    int status, fds[2];
+    char message[256];
+    pid_t pid;
+
+    if (pipe(fds) == -1) unknown_err();
+
+    switch (pid = fork()) {
+        case -1:
+            unknown_err();
+        case 0:
+            if (close(fds[0]) == -1) unknown_err();
+            if (dup2(fds[1], STDERR_FILENO) == -1) unknown_err();
+            execlp("osascript", "osascript", "-e", osascript, NULL);
+            unknown_err();
+        default:
+            if (close(fds[1]) == -1) unknown_err();
+            waitpid(pid, &status, 0);
+            if (WEXITSTATUS(status) != 0) {
+                if (read(fds[0], message, sizeof(message)) == -1) unknown_err();
+                fprintf(stderr, "Error in apple script: %s\nMessage: %s", osascript, message);
+                exit(EXIT_FAILURE);
+            } else
+                exit(EXIT_SUCCESS);
+    }
+}
+
+void unknown_err() {
+    perror("Unknown error");
     exit(EXIT_FAILURE);
 }
