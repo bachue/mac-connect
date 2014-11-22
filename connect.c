@@ -40,6 +40,7 @@ static void opts_err(char *arg);
 static void unknown_err();
 static void print_usage(char *arg);
 static void print_version();
+void set_url(char *protocol, char *user, char *pass, char *host, char *port, char *volumn);
 
 int main(int argc, char *argv[]) {
     handle_opts(argc, argv);
@@ -49,6 +50,50 @@ int main(int argc, char *argv[]) {
     else
         exec_script();
     return 0;
+}
+
+void set_url(char *protocol, char *user, char *pass,
+                  char *host, char *port, char *volumn) {
+    int protocol_len, user_len, pass_len, host_len, port_len, volumn_len, url_len;
+
+    if (host == NULL) host = DEFAULT_HOST;
+
+    protocol_len = strlen(protocol);
+    if (user != NULL) user_len = strlen(user);
+    if (pass != NULL) pass_len = strlen(pass);
+    host_len = strlen(host);
+    if (port != NULL) port_len = strlen(port);
+    if (volumn != NULL) volumn_len = strlen(volumn);
+
+    url_len = protocol_len + sizeof("://");
+    if (user != NULL) {
+        url_len += user_len + sizeof(":");
+        if (pass != NULL) url_len += pass_len;
+        url_len += sizeof("@");
+    }
+    url_len += host_len;
+    if (port != NULL) url_len += sizeof(":") + port_len;
+    if (volumn != NULL) url_len += sizeof("/") + volumn_len;
+
+    if (url_len > URL_LENGTH) unknown_err();
+
+    strncat(url, protocol, protocol_len);
+    strncat(url, "://", sizeof("://"));
+    if (user != NULL) {
+        strncat(url, user, user_len);
+        strncat(url, ":", sizeof(":"));
+        if (pass != NULL) strncat(url, pass, pass_len);
+        strncat(url, "@", sizeof("@"));
+    }
+    strncat(url, host, host_len);
+    if (port != NULL) {
+        strncat(url, ":", sizeof(":"));
+        strncat(url, port, port_len);
+    }
+    if (volumn != NULL) {
+        strncat(url, "/", sizeof("/"));
+        strncat(url, volumn, volumn_len);
+    }
 }
 
 static void handle_opts(int argc, char *argv[]) {
@@ -72,53 +117,15 @@ static void handle_opts(int argc, char *argv[]) {
     if (err > 0 || optind < argc || argc == 1) opts_err(argv[0]);
     else if (optind == 1) {
         if (protocol == NULL && user == NULL && pass == NULL && host == NULL && port == NULL && volumn == NULL)
+            // set url directly
             strncpy(url, (const char *)argv[optind], strlen(argv[optind]));
         else
             opts_err(argv[0]);
     } else {
-        if (protocol == NULL || (user == NULL && pass != NULL)) opts_err(argv[0]);
-        else {
-            int protocol_len, user_len, pass_len, host_len, port_len, volumn_len, url_len;
-
-            if (host == NULL) host = DEFAULT_HOST;
-
-            protocol_len = strlen(protocol);
-            if (user != NULL) user_len = strlen(user);
-            if (pass != NULL) pass_len = strlen(pass);
-            host_len = strlen(host);
-            if (port != NULL) port_len = strlen(port);
-            if (volumn != NULL) volumn_len = strlen(volumn);
-
-            url_len = protocol_len + sizeof("://");
-            if (user != NULL) {
-                url_len += user_len + sizeof(":");
-                if (pass != NULL) url_len += pass_len;
-                url_len += sizeof("@");
-            }
-            url_len += host_len;
-            if (port != NULL) url_len += sizeof(":") + port_len;
-            if (volumn != NULL) url_len += sizeof("/") + volumn_len;
-
-            if (url_len > URL_LENGTH) opts_err(argv[0]);
-
-            strncat(url, protocol, protocol_len);
-            strncat(url, "://", sizeof("://"));
-            if (user != NULL) {
-                strncat(url, user, user_len);
-                strncat(url, ":", sizeof(":"));
-                if (pass != NULL) strncat(url, pass, pass_len);
-                strncat(url, "@", sizeof("@"));
-            }
-            strncat(url, host, host_len);
-            if (port != NULL) {
-                strncat(url, ":", sizeof(":"));
-                strncat(url, port, port_len);
-            }
-            if (volumn != NULL) {
-                strncat(url, "/", sizeof("/"));
-                strncat(url, volumn, volumn_len);
-            }
-        }
+        if (protocol == NULL || (user == NULL && pass != NULL))
+            opts_err(argv[0]);
+        else
+            set_url(protocol, user, pass, host, port, volumn);
     }
 }
 
