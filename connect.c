@@ -10,12 +10,12 @@
 
 #define SCRIPT_PREFIX "tell app \"Finder\" to open location \""
 #define SCRIPT_SUFFIX "\""
-#define SCRIPT_LENGTH 2047
-#define BUFLEN 255
+#define SCRIPT_LENGTH 2048
+#define BUFLEN 256
 
 static int show_usage = 0, show_version = 0, show_command = 0;
 
-static char osascript[SCRIPT_LENGTH + 1] = SCRIPT_PREFIX;
+static char osascript[SCRIPT_LENGTH] = SCRIPT_PREFIX;
 static char *location = osascript + strlen(SCRIPT_PREFIX);
 static struct option options[] = {
     {"protocol", required_argument, NULL, 't'},
@@ -46,7 +46,7 @@ static void print_version();
 int main(int argc, char *argv[]) {
     parse(find_config());
     handle_opts(argc, argv);
-    strncat(osascript, SCRIPT_SUFFIX, strlen(SCRIPT_SUFFIX));
+    strlcat(osascript, SCRIPT_SUFFIX, SCRIPT_LENGTH);
     if (show_command)
         printf("%s\n", osascript);
     else
@@ -85,9 +85,9 @@ static void handle_opts(int argc, char *argv[]) {
         if (entry_is_null(&entry)) {
             struct config *find = find_by(argv[optind]);
             if (find == NULL)
-                strncpy(location, (const char *)argv[optind], URL_LENGTH);
+                strlcpy(location, (const char *)argv[optind], URL_LENGTH);
             else
-                strncpy(location, find->url, URL_LENGTH);
+                strlcpy(location, find->url, URL_LENGTH);
         }
         else
             opts_err(argv[0]);

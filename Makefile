@@ -2,6 +2,7 @@ defaulttarget: connect
 
 .PHONY: clean
 .PHONY: install
+.PHONY: test_config
 
 CC = gcc
 CFLAGS = -Wimplicit -Wstrict-prototypes -Wall

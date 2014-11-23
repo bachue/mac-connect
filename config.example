@@ -1,3 +1,5 @@
+# Copy this config file to ~/.connectrc or /etc/connect/config
+
 Server local #server name
     Protocol smb # smb, ftp, ...
     Host localhost

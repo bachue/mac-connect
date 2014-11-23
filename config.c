@@ -1,10 +1,10 @@
 #include "common.h"
 
-#define BUFLEN 2047
+#define BUFLEN 2048
 
 struct config *configs = NULL;
 static struct config *cur = NULL;
-static char config_path[BUFLEN + 1] = {0};
+static char config_path[BUFLEN] = {0};
 
 void parse(FILE *config_file);
 FILE* find_config();
@@ -89,14 +89,14 @@ FILE* find_config() {
     FILE *file;
     char *home = getenv("HOME");
     size_t homelen = strlen(home);
-    strncat(config_path, home, BUFLEN);
-    strncat(config_path, "/.connectrc", BUFLEN - homelen);
+    strlcat(config_path, home, BUFLEN);
+    strlcat(config_path, "/.connectrc", BUFLEN - homelen);
     file = fopen(config_path, "r");
     if (file == NULL) {
-        strncpy(config_path, "/etc/connect/config", BUFLEN);
+        strlcpy(config_path, "/etc/connect/config", BUFLEN);
         file = fopen(config_path, "r");
     }
-    if (file == NULL) memset(config_path, 0, BUFLEN);
+    if (file == NULL) config_path[0] = '\0';
     return file;
 }
 
@@ -220,7 +220,7 @@ void refresh() {
 
 void testcase(char *path) {
     refresh();
-    strncpy(config_path, path, BUFLEN);
+    strnlpy(config_path, path, BUFLEN);
     parse(fopen(config_path, "r"));
 }
 

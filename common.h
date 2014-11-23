@@ -8,15 +8,15 @@
 
 #define DEFAULT_HOST "localhost"
 
-#define NAME_LENGTH (48 - 1)
+#define NAME_LENGTH 48
 #define URL_LENGTH 2000
 
 #define MIN(a, b) ((a > b) ? b : a)
 #define ENTRYCMP(name, start, size) strncasecmp(start, name, MIN(strlen(name), size))
 
 struct config {
-    char name[NAME_LENGTH + 1];
-    char url[URL_LENGTH + 1];
+    char name[NAME_LENGTH];
+    char url[URL_LENGTH];
     struct config *next;
 };
 

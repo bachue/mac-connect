@@ -15,7 +15,7 @@ void to_url(char *url, struct config_entry *entry) {
     if (entry->port != NULL) url_len += strlen(":") + strlen(entry->port);
     if (entry->volumn != NULL) url_len += strlen("/") + strlen(entry->volumn);
 
-    if (url_len > URL_LENGTH) {
+    if (url_len >= URL_LENGTH) {
         fprintf(stderr, "URL is too long\n");
         exit(EXIT_FAILURE);
     }
