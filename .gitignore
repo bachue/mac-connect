@@ -29,4 +29,5 @@
 *.hex
 
 connect
+*.tar.bz2
 test_config.*/*

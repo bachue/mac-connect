@@ -3,6 +3,7 @@ defaulttarget: connect
 .PHONY: clean
 .PHONY: install
 .PHONY: test_config
+.PHONY: release
 
 CC = gcc
 CFLAGS = -Wimplicit -Wstrict-prototypes -Wall
@@ -27,11 +28,16 @@ common.o: common.c
 connect: connect.o common.o config.o
 	$(CC) -o connect common.o config.o connect.o
 
-install: connect
+install: clean
+	make RELEASE=1 && \
 	cp connect $(INSTALL_ROOT)
+
+release: clean
+	make RELEASE=1 && \
+	tar -jcvf connect.tar.bz2 connect
 
 test_config: config.c common.o
 	$(CC) -DTEST -g -o test_config common.o config.c
 
 clean:
-	rm -f connect *.o
+	rm -f connect *.o *.tar.bz2
