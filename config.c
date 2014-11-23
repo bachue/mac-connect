@@ -106,6 +106,10 @@ static void set_curnode_url(char *url, size_t size) {
 
 static void create_node(char *name, size_t size) {
     struct config *node_ptr = (struct config *) malloc(sizeof(struct config));
+    if (node_ptr == NULL) {
+        perror("Unknown Error");
+        exit(EXIT_FAILURE);
+    }
     memset((void *) node_ptr, 0, sizeof(struct config));
     strncpy(node_ptr->name, name, size);
     if (configs == NULL)
