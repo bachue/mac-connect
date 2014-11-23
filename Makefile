@@ -1,11 +1,14 @@
 defaulttarget: connect
 
 .PHONY: clean
+.PHONY: install
 
 CC = gcc
 CFLAGS = -Wimplicit -Wstrict-prototypes -Wall
 
-ifeq (${RELEASE}, 1)
+INSTALL_ROOT ?= /usr/bin
+
+ifeq ($(RELEASE), 1)
     CFLAGS += -O3
 else
     CFLAGS += -g
@@ -22,6 +25,9 @@ common.o: common.c
 
 connect: connect.o common.o config.o
 	$(CC) -o connect common.o config.o connect.o
+
+install: connect
+	cp connect $(INSTALL_ROOT)
 
 test_config: config.c common.o
 	$(CC) -DTEST -g -o test_config common.o config.c
