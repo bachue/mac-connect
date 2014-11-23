@@ -34,7 +34,7 @@ install: clean
 
 release: clean
 	make RELEASE=1 && \
-	tar -jcvf connect.tar.bz2 connect
+	tar -jcvf connect.tar.bz2 connect contrib
 
 test_config: config.c common.o
 	$(CC) -DTEST -g -o test_config common.o config.c
