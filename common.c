@@ -39,3 +39,7 @@ void to_url(char *url, struct config_entry *entry) {
     }
 }
 
+int entry_is_null(struct config_entry *entry) {
+    return entry->protocol == NULL && entry->user == NULL && entry->pass == NULL &&
+           entry->host == NULL && entry->port == NULL && entry->volumn == NULL;
+}

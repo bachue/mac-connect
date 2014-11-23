@@ -1,12 +1,13 @@
 #include "common.h"
 
 #define BUFLEN 2047
-#define MIN(a, b) ((a > b) ? b : a)
-#define ENTRYCMP(name, start, size) strncasecmp(start, name, MIN(strlen(name), size))
 
-static struct config *head = NULL, *cur = NULL;
+struct config *configs = NULL;
+static struct config *cur = NULL;
 static char config_path[BUFLEN + 1] = {0};
 
+void parse(FILE *config_file);
+FILE* find_config();
 static char* trim(char *line, size_t *n);
 static void parse_err(char *message, unsigned line);
 static void unknown_entry(unsigned line);
@@ -107,8 +108,8 @@ static void create_node(char *name, size_t size) {
     struct config *node_ptr = (struct config *) malloc(sizeof(struct config));
     memset((void *) node_ptr, 0, sizeof(struct config));
     strncpy(node_ptr->name, name, size);
-    if (head == NULL)
-        head = node_ptr, cur = node_ptr;
+    if (configs == NULL)
+        configs = node_ptr, cur = node_ptr;
     else
         cur->next = node_ptr, cur = node_ptr;
 }
@@ -165,13 +166,13 @@ int main(int argc, char  *argv[]) {
     struct config *test;
 
     testcase("test/config.empty");
-    assert(head == NULL && cur == NULL);
+    assert(configs == NULL && cur == NULL);
 
     testcase("test/config.blank");
-    assert(head == NULL && cur == NULL);
+    assert(configs == NULL && cur == NULL);
 
     testcase("test/config.1");
-    test = head;
+    test = configs;
     assert(test);
     assert(strcmp(test->name, "example") == 0);
     assert(strcmp(test->url, "protocol://user:pass@example/home") == 0);
@@ -189,7 +190,7 @@ int main(int argc, char  *argv[]) {
     assert(strcmp(test->url, "protocol://user4:pass4@example4/home4") == 0);
 
     testcase("test/config.2");
-    test = head;
+    test = configs;
     assert(test);
     assert(strcmp(test->name, "example") == 0);
     assert(strcmp(test->url, "smb://guest:@localhost:1234/public") == 0);
@@ -212,9 +213,9 @@ int main(int argc, char  *argv[]) {
 
 void refresh() {
     struct config *ptr;
-    for (ptr = head; ptr != NULL; ptr = ptr->next)
+    for (ptr = configs; ptr != NULL; ptr = ptr->next)
         free(ptr);
-    head = cur = NULL;
+    configs = cur = NULL;
 }
 
 void testcase(char *path) {

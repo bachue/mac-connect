@@ -11,6 +11,9 @@
 #define NAME_LENGTH (48 - 1)
 #define URL_LENGTH 2000
 
+#define MIN(a, b) ((a > b) ? b : a)
+#define ENTRYCMP(name, start, size) strncasecmp(start, name, MIN(strlen(name), size))
+
 struct config {
     char name[NAME_LENGTH + 1];
     char url[URL_LENGTH + 1];
@@ -22,7 +25,6 @@ struct config_entry {
 };
 
 void to_url(char *url, struct config_entry *entry);
-void parse(FILE *config_file);
-FILE* find_config();
+int entry_is_null(struct config_entry *entry);
 
 #endif

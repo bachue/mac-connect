@@ -30,6 +30,11 @@ static struct option options[] = {
     {NULL, 0, NULL, 0},
 };
 
+extern struct config *configs;
+void parse(FILE *config_file);
+FILE* find_config();
+
+static struct config* find_by(char *name);
 static void handle_opts(int argc, char *argv[]);
 static int validate(struct config_entry *entry);
 static void exec_script();
@@ -39,6 +44,7 @@ static void print_usage(char *arg);
 static void print_version();
 
 int main(int argc, char *argv[]) {
+    parse(find_config());
     handle_opts(argc, argv);
     strncat(osascript, SCRIPT_SUFFIX, strlen(SCRIPT_SUFFIX));
     if (show_command)
@@ -48,10 +54,17 @@ int main(int argc, char *argv[]) {
     return 0;
 }
 
+static struct config* find_by(char *name) {
+    struct config* ptr;
+    for (ptr = configs; ptr != NULL; ptr = ptr->next)
+        if (ENTRYCMP(name, ptr->name, NAME_LENGTH) == 0) return ptr;
+    return NULL;
+}
+
 static void handle_opts(int argc, char *argv[]) {
     char c;
     int err = 0, index = 0;
-    struct config_entry entry = {0}, null = {0};
+    struct config_entry entry = {0};
     while((c = getopt_long(argc, argv, "t:u:p:h:P:v:", options, &index)) != -1) {
         switch (c) {
             case 't': entry.protocol = optarg; break;
@@ -67,11 +80,15 @@ static void handle_opts(int argc, char *argv[]) {
     if (show_usage) print_usage(argv[0]);
     if (show_version) print_version();
 
-    if (err > 0 || optind < argc || argc == 1) opts_err(argv[0]);
+    if (err > 0 || (argc > 2 && optind < argc) || argc == 1) opts_err(argv[0]);
     else if (optind == 1) {
-        if (memcmp(&entry, &null, sizeof(struct config_entry)) == 0)
-            // set location directly
-            strncpy(location, (const char *)argv[optind], strlen(argv[optind]));
+        if (entry_is_null(&entry)) {
+            struct config *find = find_by(argv[optind]);
+            if (find == NULL)
+                strncpy(location, (const char *)argv[optind], URL_LENGTH);
+            else
+                strncpy(location, find->url, URL_LENGTH);
+        }
         else
             opts_err(argv[0]);
     } else {
