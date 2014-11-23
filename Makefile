@@ -1,7 +1,15 @@
 defaulttarget: connect
 
-CFLAGS = -Wimplicit -Wstrict-prototypes -Wall -g
+.PHONY: clean
+
 CC = gcc
+CFLAGS = -Wimplicit -Wstrict-prototypes -Wall
+
+ifeq (${RELEASE}, 1)
+    CFLAGS += -O3
+else
+    CFLAGS += -g
+endif
 
 connect.o: connect.c
 	$(CC) $(CFLAGS) -c -o connect.o connect.c
@@ -19,4 +27,4 @@ test_config: config.c common.o
 	$(CC) -DTEST -g -o test_config common.o config.c
 
 clean:
-	rm connect *.o
+	rm -f connect *.o
