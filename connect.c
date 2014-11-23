@@ -13,7 +13,7 @@
 #define SCRIPT_LENGTH 2048
 #define BUFLEN 256
 
-static int show_usage = 0, show_version = 0, show_command = 0;
+static int show_usage = 0, show_version = 0, show_command = 0, list_configs = 0;
 
 static char osascript[SCRIPT_LENGTH] = SCRIPT_PREFIX;
 static char *location = osascript + strlen(SCRIPT_PREFIX);
@@ -27,6 +27,7 @@ static struct option options[] = {
     {"help", no_argument, &show_usage, 1},
     {"version", no_argument, &show_version, 1},
     {"dry-run", no_argument, &show_command, 1},
+    {"list-configs", no_argument, &list_configs, 1},
     {NULL, 0, NULL, 0},
 };
 
@@ -42,6 +43,7 @@ static void opts_err(char *arg);
 static void unknown_err();
 static void print_usage(char *arg);
 static void print_version();
+static void print_configs();
 
 int main(int argc, char *argv[]) {
     parse(find_config());
@@ -79,6 +81,7 @@ static void handle_opts(int argc, char *argv[]) {
 
     if (show_usage) print_usage(argv[0]);
     if (show_version) print_version();
+    if (list_configs) print_configs();
 
     if (err > 0 || (argc > 2 && optind < argc) || argc == 1) opts_err(argv[0]);
     else if (optind == 1) {
@@ -145,7 +148,14 @@ static void exec_script() {
     }
 }
 
-void unknown_err() {
+static void print_configs() {
+    struct config* ptr;
+    for (ptr = configs; ptr != NULL; ptr = ptr->next)
+        printf("%s:%s\n", ptr->name, ptr->url);
+    exit(EXIT_SUCCESS);
+}
+
+static void unknown_err() {
     perror("Unknown error");
     exit(EXIT_FAILURE);
 }
