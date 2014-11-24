@@ -13,7 +13,7 @@
 #define SCRIPT_LENGTH 2048
 #define BUFLEN 256
 
-static int show_usage = 0, show_version = 0, show_command = 0, list_configs = 0;
+static int show_usage = 0, show_version = 0, verbose = 0, list_configs = 0;
 
 static char osascript[SCRIPT_LENGTH] = SCRIPT_PREFIX;
 static char *location = osascript + strlen(SCRIPT_PREFIX);
@@ -26,7 +26,7 @@ static struct option options[] = {
     {"volumn", optional_argument, NULL, 'v'},
     {"help", no_argument, &show_usage, 1},
     {"version", no_argument, &show_version, 1},
-    {"dry-run", no_argument, &show_command, 1},
+    {"verbose", no_argument, &verbose, 1},
     {"list-configs", no_argument, &list_configs, 1},
     {NULL, 0, NULL, 0},
 };
@@ -44,15 +44,14 @@ static void unknown_err();
 static void print_usage(char *arg);
 static void print_version();
 static void print_configs();
+static void cannot_connect();
 
 int main(int argc, char *argv[]) {
     parse(find_config());
     handle_opts(argc, argv);
     strlcat(osascript, SCRIPT_SUFFIX, SCRIPT_LENGTH);
-    if (show_command)
-        printf("%s\n", osascript);
-    else
-        exec_script();
+    if (verbose) printf("AppleScript: %s\n", osascript);
+    exec_script();
     return 0;
 }
 
@@ -83,8 +82,8 @@ static void handle_opts(int argc, char *argv[]) {
     if (show_version) print_version();
     if (list_configs) print_configs();
 
-    if (err > 0 || (argc > 2 && optind < argc) || argc == 1) opts_err(argv[0]);
-    else if (optind == 1) {
+    if (err > 0 || argc - optind > 1) opts_err(argv[0]);
+    else if (optind < argc) {
         if (entry_is_null(&entry)) {
             struct config *find = find_by(argv[optind]);
             if (find == NULL)
@@ -123,28 +122,32 @@ static void print_version() {
 
 static void exec_script() {
     int status, fds[2];
-    char message[BUFLEN];
     pid_t pid;
 
     if (pipe(fds) == -1) unknown_err();
 
     switch (pid = fork()) {
-        case -1:
-            unknown_err();
-        case 0:
-            if (close(fds[0]) == -1) unknown_err();
-            if (dup2(fds[1], STDERR_FILENO) == -1) unknown_err();
-            execlp("osascript", "osascript", "-e", osascript, NULL);
-            unknown_err();
-        default:
-            if (close(fds[1]) == -1) unknown_err();
-            waitpid(pid, &status, 0);
-            if (WEXITSTATUS(status) != 0) {
-                if (read(fds[0], message, BUFLEN) == -1) unknown_err();
-                fprintf(stderr, "Error in apple script: %s\nMessage: %s", osascript, message);
-                exit(EXIT_FAILURE);
-            } else
-                exit(EXIT_SUCCESS);
+    case -1:
+        unknown_err();
+    case 0:
+        if (close(fds[0]) == -1 ||
+            dup2(fds[1], STDERR_FILENO) == -1 ||
+            close(fds[1]) == -1) unknown_err();
+        execlp("osascript", "osascript", "-e", osascript, NULL);
+        unknown_err();
+    default:
+        if (close(fds[1]) == -1) unknown_err();
+        waitpid(pid, &status, 0);
+
+        if (WEXITSTATUS(status) == 0) exit(EXIT_SUCCESS);
+
+        if (verbose) {
+            char message[BUFLEN];
+            if (read(fds[0], message, BUFLEN) == -1) unknown_err();
+            fprintf(stderr, "Error in apple script: %s\nMessage: %s", osascript, message);
+        }
+        else cannot_connect();
+        exit(EXIT_FAILURE);
     }
 }
 
@@ -157,5 +160,10 @@ static void print_configs() {
 
 static void unknown_err() {
     perror("Unknown error");
+    exit(EXIT_FAILURE);
+}
+
+static void cannot_connect() {
+    fprintf(stderr, "Cannot connect to the server, please check your arguments\n");
     exit(EXIT_FAILURE);
 }
