@@ -8,15 +8,11 @@
 
 #define USAGE "Usage:\n  %s -t protocol [-u user] [-p pass] [-h host] [-P port] [-v volumn]\n  %s protocol://[user:[pass]@]host[:port]/[:volumn]\n"
 
-#define SCRIPT_PREFIX "tell app \"Finder\" to open location \""
-#define SCRIPT_SUFFIX "\""
-#define SCRIPT_LENGTH 2048
 #define BUFLEN 256
 
 static int show_usage = 0, show_version = 0, verbose = 0, list_configs = 0;
 
-static char osascript[SCRIPT_LENGTH] = SCRIPT_PREFIX;
-static char *location = osascript + strlen(SCRIPT_PREFIX);
+static char location[URL_LENGTH] = "";
 static struct option options[] = {
     {"protocol", required_argument, NULL, 't'},
     {"user", optional_argument, NULL, 'u'},
@@ -38,7 +34,7 @@ FILE* find_config();
 static struct config* find_by(char *name);
 static void handle_opts(int argc, char *argv[]);
 static int validate(struct config_entry *entry);
-static void exec_script();
+static void open_url();
 static void opts_err(char *arg);
 static void unknown_err();
 static void print_usage(char *arg);
@@ -49,9 +45,8 @@ static void cannot_connect();
 int main(int argc, char *argv[]) {
     parse(find_config());
     handle_opts(argc, argv);
-    strlcat(osascript, SCRIPT_SUFFIX, SCRIPT_LENGTH);
-    if (verbose) printf("AppleScript: %s\n", osascript);
-    exec_script();
+    if (verbose) printf("open %s\n", location);
+    open_url();
     return 0;
 }
 
@@ -120,7 +115,7 @@ static void print_version() {
     exit(EXIT_SUCCESS);
 }
 
-static void exec_script() {
+static void open_url() {
     int status, fds[2];
     pid_t pid;
 
@@ -133,7 +128,7 @@ static void exec_script() {
         if (close(fds[0]) == -1 ||
             dup2(fds[1], STDERR_FILENO) == -1 ||
             close(fds[1]) == -1) unknown_err();
-        execlp("osascript", "osascript", "-e", osascript, NULL);
+        execlp("open", location, NULL);
         unknown_err();
     default:
         if (close(fds[1]) == -1) unknown_err();
@@ -144,7 +139,7 @@ static void exec_script() {
         if (verbose) {
             char message[BUFLEN];
             if (read(fds[0], message, BUFLEN) == -1) unknown_err();
-            fprintf(stderr, "Error in apple script: %s\nMessage: %s", osascript, message);
+            fprintf(stderr, "Error: %s", message);
         }
         else cannot_connect();
         exit(EXIT_FAILURE);
