@@ -141,7 +141,7 @@ static char* trim(char *line, size_t *n) {
 }
 
 static void writeback_entry(struct config_entry *entry) {
-    if (entry_is_null(entry)) to_url(cur->url, entry);
+    if (!entry_is_null(entry)) to_url(cur->url, entry);
 }
 
 static void clear_entry(struct config_entry *entry) {

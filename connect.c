@@ -45,7 +45,6 @@ static void cannot_connect();
 int main(int argc, char *argv[]) {
     parse(find_config());
     handle_opts(argc, argv);
-    if (verbose) printf("open %s\n", location);
     open_url();
     return 0;
 }
@@ -128,7 +127,8 @@ static void open_url() {
         if (close(fds[0]) == -1 ||
             dup2(fds[1], STDERR_FILENO) == -1 ||
             close(fds[1]) == -1) unknown_err();
-        execlp("open", location, NULL);
+        if (verbose) printf("open %s\n", location);
+        execlp("open", "open", location, NULL);
         unknown_err();
     default:
         if (close(fds[1]) == -1) unknown_err();

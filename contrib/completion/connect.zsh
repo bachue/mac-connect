@@ -1,7 +1,7 @@
 #compdef connect
 
 local -a _list
-_list=`connect --list-configs`
+_list=(`connect --list-configs`)
 
 _describe -t common-commands 'common commands' _list
 
