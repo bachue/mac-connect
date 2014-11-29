@@ -4,7 +4,7 @@
 
 struct config *configs = NULL;
 static struct config *cur = NULL;
-static char config_path[BUFLEN] = {0};
+static char config_path[BUFLEN] = "";
 
 void parse(FILE *config_file);
 FILE* find_config();
@@ -18,7 +18,7 @@ static void writeback_entry(struct config_entry *entry);
 static void clear_entry(struct config_entry *entry);
 
 void parse(FILE *config_file) {
-    char line[BUFLEN + 1], buf[BUFLEN + 1] = {0}, *buf_start = buf, *start;
+    char line[BUFLEN + 1], buf[BUFLEN + 1] = "", *buf_start = buf, *start;
     size_t size;
     unsigned line_num = 0;
     struct config_entry cur_entry = {0};
@@ -141,9 +141,7 @@ static char* trim(char *line, size_t *n) {
 }
 
 static void writeback_entry(struct config_entry *entry) {
-    struct config_entry null = {0};
-    if (memcmp(entry, &null, sizeof(struct config_entry)) != 0)
-        to_url(cur->url, entry);
+    if (entry_is_null(entry)) to_url(cur->url, entry);
 }
 
 static void clear_entry(struct config_entry *entry) {
